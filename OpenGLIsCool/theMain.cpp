@@ -11,40 +11,47 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <iostream>
 
-static const struct
+#include <fstream>
+
+#include "cShaderManager.h"
+
+static const struct sVertext
 {
-    float x, y;
+    float x, y, z;
     float r, g, b;
-} vertices[6] =
-{
-    {  0.f,   0.5f, 1.f, 0.f, 0.f },
-    {  0.45f,  0.3f, 0.f, 1.f, 0.f },
-    {  0.45f, -0.3f, 0.f, 0.f, 1.f },
-    {  0.f,  -0.5f, 1.f, 0.f, 0.f },
-    { -0.45f, -0.3f, 0.f, 1.f, 0.f },
-    { -0.45f,  0.3f, 1.f, 0.f, 0.f }
 };
 
-static const char* vertex_shader_text =
-"#version 110\n"
-"uniform mat4 MVP;\n"
-"attribute vec3 vCol;\n"
-"attribute vec2 vPos;\n"
-"varying vec3 color;\n"
-"void main()\n"
-"{\n"
-"    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
-"    color = vCol;\n"
-"}\n";
+sVertext vertices[6] =
+{
+    { -0.6f, -0.4f, 0.0f, 1.f, 0.f, 0.f },
+    {  0.6f, -0.4f, 0.0f, 0.f, 1.f, 0.f },
+    {  0.0f,  0.6f, 0.0f, 0.f, 0.f, 1.f },
+    { -0.6f,  0.4f, 0.0f, 1.f, 0.f, 0.f },
+    {  0.6f,  0.4f, 0.0f, 0.f, 1.f, 0.f },
+    {  0.0f,  1.6f, 0.0f, 1.f, 0.f, 0.f }
+};
 
-static const char* fragment_shader_text =
-"#version 110\n"
-"varying vec3 color;\n"
-"void main()\n"
-"{\n"
-"    gl_FragColor = vec4(color, 1.0);\n"
-"}\n";
+//static const char* vertex_shader_text =
+//"#version 110\n"
+//"uniform mat4 MVP;\n"
+//"attribute vec3 vCol;\n"
+//"attribute vec3 vPos;\n"
+//"varying vec3 color;\n"
+//"void main()\n"
+//"{\n"
+//"    gl_Position = MVP * vec4(vPos, 1.0);\n"
+//"    color = vCol;\n"
+//"}\n";
+
+//static const char* fragment_shader_text =
+//"#version 110\n"
+//"varying vec3 color;\n"
+//"void main()\n"
+//"{\n"
+//"    gl_FragColor = vec4(color, 1.0);\n"
+//"}\n";
 
 static void error_callback(int error, const char* description)
 {
@@ -56,6 +63,9 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
+
+//Create a global cShaderManager pointer
+cShaderManager* g_pShaderManager = 0;   //0 == NULL
 
 int main(void)
 {
@@ -72,7 +82,7 @@ int main(void)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-    window = glfwCreateWindow(320, 640, "Polygon example", NULL, NULL);
+    window = glfwCreateWindow(600, 800, "Polygon example", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -89,7 +99,7 @@ int main(void)
     glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    /*vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
     glCompileShader(vertex_shader);
 
@@ -100,7 +110,33 @@ int main(void)
 
     glAttachShader(program, vertex_shader);
     glAttachShader(program, fragment_shader);
-    glLinkProgram(program);
+    glLinkProgram(program);*/
+
+    /**************************************************************************************************************/
+    //Since we create g_pShaderManager as a global variable, we have to put the global scope (::) in front of it
+    ::g_pShaderManager = new cShaderManager();
+
+    cShaderManager::cShader vertShader;
+    cShaderManager::cShader fragShader;
+
+    vertShader.fileName = "simpleVertex.glsl";
+    fragShader.fileName = "simpleFragment.glsl";
+
+    //Create the program
+    if (!::g_pShaderManager->createProgramFromFile("SimpleShaderProg", vertShader, fragShader)) {
+        //There was a problem
+        std::cout << "ERROR: Can't make shader program because: " << std::endl;
+        std::cout << ::g_pShaderManager->getLastError() << std::endl;
+
+        //Exit the program and clean up code
+        return -1;
+    }
+    
+    //Get the id of the program and put it in "program"
+    program = ::g_pShaderManager->getIDFromFriendlyName("SimpleShaderProg");
+    /**************************************************************************************************************/
+
+
 
     mvp_location = glGetUniformLocation(program, "MVP");
     vpos_location = glGetAttribLocation(program, "vPos");
@@ -159,10 +195,13 @@ int main(void)
         //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(mvp));
 
-        glDrawArrays(GL_POLYGON, 0, 6);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    delete g_pShaderManager;
+
     glfwDestroyWindow(window);
     glfwTerminate();
     exit(EXIT_SUCCESS);

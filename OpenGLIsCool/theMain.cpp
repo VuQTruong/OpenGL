@@ -14,6 +14,7 @@
 #include <iostream>
 
 #include <fstream>
+#include <string>
 
 #include "cShaderManager.h"
 
@@ -53,6 +54,82 @@ sVertext vertices[6] =
 //"    gl_FragColor = vec4(color, 1.0);\n"
 //"}\n";
 
+static void ProcessingGraphicFile() 
+{
+    std::ifstream file("assets/models/bun270_xyz_rgba.ply");
+
+    if (!file.is_open()) {
+        //There was something wrong
+        std::cout << "Unable to load the file" << std::endl;
+        return;
+    }
+
+    
+    std::string temp;
+    //Looking for the word "vertex"
+    while (true) {
+        file >> temp;
+        if (temp == "vertex") {
+            break;
+        }
+    }
+    int numOfVertices = 0;
+    file >> numOfVertices;
+
+    //Looking for the word "face"
+    while (true) {
+        file >> temp;
+        if (temp == "face") {
+            break;
+        }
+    }
+    int numOfTriangles = 0;
+    file >> numOfTriangles;
+
+    //Looking fro the word "end_header"
+    while (true) {
+        file >> temp;
+        if (temp == "end_header") {
+            break;
+        }
+    }
+
+    float darkestR = 0;
+    float darkestG = 0;
+    float darkestB = 0;
+
+    float lightestR = 255;
+    float lightestG = 255;
+    float lightestB = 255;
+
+    float x, y, z, r, g, b, a;
+
+    for (int index = 0; index < numOfVertices; index++) { 
+        file >> x >> y >> z >> r >> g >> b >> a;
+
+        //Darkest color of types
+        darkestR = darkestR > r ? darkestR : r;
+        darkestG = darkestG > g ? darkestG : g;
+        darkestB = darkestB > b ? darkestB : b;
+
+        //Lightest color of types
+        lightestR = lightestR < r ? lightestR : r;
+        lightestG = lightestG < g ? lightestG : g;
+        lightestB = lightestB < b ? lightestB : b;
+    }
+
+    std::cout << "Number of vertices: " << numOfVertices << std::endl;
+    std::cout << "Number of triangles: " << numOfTriangles << std::endl << std::endl;
+    std::cout << "Darkest Red: " << (float)(darkestR / 255) << std::endl;
+    std::cout << "Darkest Green: " << (float)(darkestG / 255) << std::endl;
+    std::cout << "Darkest Blue: " << (float)(darkestB / 255) << std::endl << std::endl;
+    std::cout << "Lightest Red: " << (float)(lightestR / 255) << std::endl;
+    std::cout << "Lightest Green: " << (float)(lightestG / 255) << std::endl;
+    std::cout << "Lightest Blue: " << (float)(lightestB / 255) << std::endl;
+
+    return;
+}
+
 static void error_callback(int error, const char* description)
 {
     fprintf(stderr, "Error: %s\n", description);
@@ -69,6 +146,8 @@ cShaderManager* g_pShaderManager = 0;   //0 == NULL
 
 int main(void)
 {
+    ProcessingGraphicFile();
+
     GLFWwindow* window;
     GLuint vertex_buffer, vertex_shader, fragment_shader, program;
     GLint mvp_location, vpos_location, vcol_location;
@@ -136,18 +215,15 @@ int main(void)
     program = ::g_pShaderManager->getIDFromFriendlyName("SimpleShaderProg");
     /**************************************************************************************************************/
 
-
-
     mvp_location = glGetUniformLocation(program, "MVP");
     vpos_location = glGetAttribLocation(program, "vPos");
     vcol_location = glGetAttribLocation(program, "vCol");
 
     glEnableVertexAttribArray(vpos_location);
-    glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE,
-        sizeof(vertices[0]), (void*)0);
+    glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*)0);
+
     glEnableVertexAttribArray(vcol_location);
-    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE,
-        sizeof(vertices[0]), (void*)(sizeof(float) * 2));
+    glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*)(sizeof(float) * 2));
     while (!glfwWindowShouldClose(window))
     {
         float ratio;

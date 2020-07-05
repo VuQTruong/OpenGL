@@ -1,9 +1,5 @@
-﻿  cShader.cpp
-  cShaderManager.cpp
-  theMain.cpp
-D:\Local Disk D\Fanshawe\4. Computer Programming Analyst\4. Semester 4\0. Practicing\C++ Graphics\OpenGLIsCool\OpenGLIsCool\theMain.cpp(24,2): warning C4091: 'static ': ignored on left of 'const sVertext' when no variable is declared
-D:\Local Disk D\Fanshawe\4. Computer Programming Analyst\4. Semester 4\0. Practicing\C++ Graphics\OpenGLIsCool\OpenGLIsCool\theMain.cpp(73,42): warning C4101: 'fragment_shader': unreferenced local variable
-D:\Local Disk D\Fanshawe\4. Computer Programming Analyst\4. Semester 4\0. Practicing\C++ Graphics\OpenGLIsCool\OpenGLIsCool\theMain.cpp(73,27): warning C4101: 'vertex_shader': unreferenced local variable
-  Generating Code...
-LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
+﻿  theMain.cpp
+D:\Local Disk D\Fanshawe\4. Computer Programming Analyst\4. Semester 4\0. Practicing\C++ Graphics\OpenGLIsCool\OpenGLIsCool\theMain.cpp(25,2): warning C4091: 'static ': ignored on left of 'const sVertext' when no variable is declared
+D:\Local Disk D\Fanshawe\4. Computer Programming Analyst\4. Semester 4\0. Practicing\C++ Graphics\OpenGLIsCool\OpenGLIsCool\theMain.cpp(153,42): warning C4101: 'fragment_shader': unreferenced local variable
+D:\Local Disk D\Fanshawe\4. Computer Programming Analyst\4. Semester 4\0. Practicing\C++ Graphics\OpenGLIsCool\OpenGLIsCool\theMain.cpp(153,27): warning C4101: 'vertex_shader': unreferenced local variable
   OpenGLIsCool.vcxproj -> D:\Local Disk D\Fanshawe\4. Computer Programming Analyst\4. Semester 4\0. Practicing\C++ Graphics\OpenGLIsCool\x64\Debug\OpenGLIsCool.exe

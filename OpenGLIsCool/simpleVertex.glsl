@@ -1,11 +1,11 @@
-#version 110
+#version 420
 
 uniform mat4 MVP;
 
-attribute vec3 vCol;
-attribute vec3 vPos;
+in vec3 vCol;
+in vec3 vPos;
 
-varying vec3 color;
+out vec3 color;
 
 void main()
 {

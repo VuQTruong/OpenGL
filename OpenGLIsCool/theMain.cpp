@@ -189,7 +189,7 @@ static void ReadFromFile()
         return;
     }
 
-    bool kepReading = true;
+    bool keepReading = true;
     std::string tempString;
     std::string meshName;					
     bool isWireFrame;
@@ -236,22 +236,25 @@ static void ReadFromFile()
             file >> tempString;
             if (tempString == "end_of_file")
             {
-                kepReading = false;
+                keepReading = false;
                 std::cout << "Information loaded..." << std::endl;
             }
-
-            //Iterate to the next object
-            it_object++;
-
-            //If the number of saved objects greater than the number of existing objects
-            //Create new objets
-            if (it_object == ::g_pVecObjects.end())
+            else
             {
-                cMeshObject* pObject = new cMeshObject();
-                ::g_pVecObjects.push_back(pObject);
-                it_object = ::g_pVecObjects.end() - 1;
+                //Iterate to the next object
+                it_object++;
+
+                //If the number of saved objects greater than the number of existing objects
+                //Create new objets
+                if (it_object == ::g_pVecObjects.end())
+                {
+                    cMeshObject* pObject = new cMeshObject();
+                    ::g_pVecObjects.push_back(pObject);
+                    it_object = ::g_pVecObjects.end() - 1;
+                }
             }
-        } while (kepReading);
+            
+        } while (keepReading);
     }
     //There is no existing object, create loaded objects
     else
@@ -296,10 +299,10 @@ static void ReadFromFile()
             file >> tempString;
             if (tempString == "end_of_file") 
             {
-                kepReading = false;
+                keepReading = false;
                 std::cout << "All objects loaded..." << std::endl;
             }
-        } while (kepReading);
+        } while (keepReading);
     }
 }
 

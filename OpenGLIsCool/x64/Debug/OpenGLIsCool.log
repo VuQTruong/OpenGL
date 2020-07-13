@@ -1,5 +1,0 @@
-﻿  theMain.cpp
-D:\Local Disk D\Fanshawe\4. Computer Programming Analyst\4. Semester 4\0. Practicing\C++ Graphics\OpenGLIsCool\OpenGLIsCool\theMain.cpp(240,42): warning C4101: 'fragment_shader': unreferenced local variable
-D:\Local Disk D\Fanshawe\4. Computer Programming Analyst\4. Semester 4\0. Practicing\C++ Graphics\OpenGLIsCool\OpenGLIsCool\theMain.cpp(240,27): warning C4101: 'vertex_shader': unreferenced local variable
-D:\Local Disk D\Fanshawe\4. Computer Programming Analyst\4. Semester 4\0. Practicing\C++ Graphics\OpenGLIsCool\OpenGLIsCool\theMain.cpp(240,12): warning C4101: 'vertex_buffer': unreferenced local variable
-  OpenGLIsCool.vcxproj -> D:\Local Disk D\Fanshawe\4. Computer Programming Analyst\4. Semester 4\0. Practicing\C++ Graphics\OpenGLIsCool\x64\Debug\OpenGLIsCool.exe

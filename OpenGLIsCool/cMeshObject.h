@@ -13,7 +13,7 @@ public:
 	~cMeshObject() {};
 	std::string meshName;
 	glm::vec3 position;				//0,0,0 (origin)
-	glm::vec4 coluorRGBA;			//0,0,0,1 (black)
+	glm::vec4 colourRGBA;			//0,0,0,1 (black)
 	glm::vec3 orientation;			//roation: XYZ
 	float scale;					//1.0f
 	bool isWireFrame;				//false

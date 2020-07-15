@@ -22,7 +22,7 @@
 #include "cMeshObject.h"
 
 //Camera
-glm::vec3 g_cameraEye = glm::vec3(0.0, 0.0, +100.0f);
+glm::vec3 g_cameraEye = glm::vec3(0.0, 0.0, +50.0f);
 glm::vec3 g_cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 g_upVector = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -317,7 +317,7 @@ static void error_callback(int error, const char* description)
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    float const CAMERA_SPEED = 0.5f;
+    float const CAMERA_SPEED = 1.0f;
     float const SCALE_LEVEL = 0.001f;
     float const ROTATE_LEVEL = 1.0f;
     float const TRANSLATE_LEVEL = 0.5f;
@@ -530,27 +530,25 @@ int main(void)
     //glGenBuffers(1, &vertex_buffer);
     //glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
     ////glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
+//
     //unsigned int sizeOfVertBufferInBytes = sizeof(sVertex) * ::g_numOfVertices;
     //glBufferData(GL_ARRAY_BUFFER, 
     //             sizeOfVertBufferInBytes,
     //             ::g_pVertexBuffer, 
     //             GL_STATIC_DRAW);
-
-    /*vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
-    glCompileShader(vertex_shader);
-
-    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_shader_text, NULL);
-    glCompileShader(fragment_shader);
-    program = glCreateProgram();
-
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    glLinkProgram(program);*/
-
-
+//
+    //vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    //glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
+    //glCompileShader(vertex_shader);
+//
+    //fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    //glShaderSource(fragment_shader, 1, &fragment_shader_text, NULL);
+    //glCompileShader(fragment_shader);
+    //program = glCreateProgram();
+//
+    //glAttachShader(program, vertex_shader);
+    //glAttachShader(program, fragment_shader);
+    //glLinkProgram(program);
 
     /************************************************ SHADER MANAGER ***************************************************/
     //Since we create g_pShaderManager as a global variable, we have to put the global scope (::) in front of it
@@ -614,15 +612,27 @@ int main(void)
     //        mdiRabbit, program);
     //}
     
-    // Load the space shuttle, too
-    sModelDrawInfo mdiSpaceShuttle;
-    if (!::g_pVAOManager->LoadModelIntoVAO("assets/models/SpaceShuttleOrbiter_xyz_rgba.ply",
-        mdiSpaceShuttle, program)) 
+    //// Load the space shuttle, too
+    //sModelDrawInfo mdiSpaceShuttle;
+    //if (!::g_pVAOManager->LoadModelIntoVAO("assets/models/SpaceShuttleOrbiter_xyz_rgba.ply",
+    //    mdiSpaceShuttle, program)) 
+    //{
+    //    std::cout << "Error: " << ::g_pVAOManager->getLastError() << std::endl;
+    //}
+    //
+    //sModelDrawInfo mdiMountainTerrain;
+    //if (!::g_pVAOManager->LoadModelIntoVAO("assets/models/Mountain_Terrain_xyz_rgba.ply",
+    //    mdiSpaceShuttle, program)) 
+    //{
+    //    std::cout << "Error: " << ::g_pVAOManager->getLastError() << std::endl;
+    //}
+
+    sModelDrawInfo mdiDolphin;
+    if (!::g_pVAOManager->LoadModelIntoVAO("assets/models/dolphin_xyz_n_rgba_uv.ply",
+        mdiDolphin, program))
     {
         std::cout << "Error: " << ::g_pVAOManager->getLastError() << std::endl;
     }
-    
-    
     /****************************************************************************************************************/
 
 
@@ -658,13 +668,14 @@ int main(void)
     //pArena->position.y = -20.0f;
     //pArena->scale = 1.0f;
     //::g_pVecObjects.push_back(pArena);
-
+    /*
     cMeshObject* pShuttle01 = new cMeshObject();
     pShuttle01->meshName = "assets/models/SpaceShuttleOrbiter_xyz_rgba.ply";
     pShuttle01->position.x = +30.0f;
     pShuttle01->position.y = +10.0f;
     pShuttle01->scale = 1.0f / 100.0f;    // 100th of it's normal size
     pShuttle01->orientation.z = glm::radians(0.0f);
+    pShuttle01->colourRGBA = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
     ::g_pVecObjects.push_back(pShuttle01);
 
     cMeshObject* pShuttle02 = new cMeshObject();
@@ -739,27 +750,42 @@ int main(void)
     pShuttle10->orientation.z = glm::radians(0.0f);
     ::g_pVecObjects.push_back(pShuttle10);
 
+    cMeshObject* pMountainTerrain = new cMeshObject();
+    pMountainTerrain->meshName = "assets/models/Mountain_Terrain_xyz_rgba.ply";
+    pMountainTerrain->position.x = -100.0f;
+    pMountainTerrain->position.y = 0.0f;
+    ::g_pVecObjects.push_back(pMountainTerrain);
+    */
+
+    cMeshObject* pDolphin = new cMeshObject();
+    pDolphin->meshName = "assets/models/dolphin_xyz_n_rgba_uv.ply";
+    pDolphin->position.x = +0.0f;
+    pDolphin->position.y = +0.0f;
+    //pDolphin->colourRGBA = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+    pDolphin->scale = 1.0f/50.0f;
+    ::g_pVecObjects.push_back(pDolphin);
     /****************************************************************************************************************/
 
     //glEnableVertexAttribArray(vpos_location);
     //glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*)0);
-
+//
     //glEnableVertexAttribArray(vcol_location);
     //glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*)(sizeof(float) * 2));
-
+//
     //glEnableVertexAttribArray(vpos_location);
     //glVertexAttribPointer(  vpos_location,
     //                        3, GL_FLOAT, GL_FALSE,
     //                        sizeof(sVertex),               //Stride
     //                        (void*)offsetof(sVertex, x));
-
-
+//
     //glEnableVertexAttribArray(vcol_location);
     //glVertexAttribPointer(  vcol_location,
     //                        3, GL_FLOAT, GL_FALSE,
     //                        sizeof(sVertex),
     //                        (void*)offsetof(sVertex, r));
 
+    //Get the location of the "uniform" variable which control the colour of an object
+    //GLint objectColour_LocID = glGetUniformLocation(program, "objectColour");
 
     while (!glfwWindowShouldClose(window))
     {
@@ -891,6 +917,16 @@ int main(void)
 
             //glDrawArrays(GL_TRIANGLES, 0, 6);
             //glDrawArrays(GL_TRIANGLES, 0, ::g_numOfVertices);
+
+
+
+            ////Set the uniform colour info
+            //glUniform4f(objectColour_LocID,
+            //            pCurMesh->colourRGBA.r,
+            //            pCurMesh->colourRGBA.g,
+            //            pCurMesh->colourRGBA.b,
+            //            pCurMesh->colourRGBA.a);
+
 
             sModelDrawInfo mdiModelToDraw;
             if (::g_pVAOManager->FindDrawInfoByModelName(pCurMesh->meshName, mdiModelToDraw))

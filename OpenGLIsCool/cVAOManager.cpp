@@ -105,19 +105,34 @@ bool cVAOManager::LoadModelIntoVAO(
 
 	GLint vpos_location = glGetAttribLocation(shaderProgramID, "vPos");	// program
 	GLint vcol_location = glGetAttribLocation(shaderProgramID, "vCol");	// program;
+	GLint vNormal_location = glGetAttribLocation(shaderProgramID, "vNormal");	// program;
+	GLint vTexture_location = glGetAttribLocation(shaderProgramID, "vTexture");	// program;
+
 
 	// Set the vertex attributes for this shader
 	glEnableVertexAttribArray(vpos_location);	// vPos
 	glVertexAttribPointer( vpos_location, 3,		// vPos
 						   GL_FLOAT, GL_FALSE,
-						   sizeof(float) * 6, 
-						   ( void* )0);
+						   sizeof(sVert),
+						   ( void* )offsetof(sVert, x));
 
 	glEnableVertexAttribArray(vcol_location);	// vCol
-	glVertexAttribPointer( vcol_location, 3,		// vCol
+	glVertexAttribPointer( vcol_location, 4,		// vCol
 						   GL_FLOAT, GL_FALSE,
-						   sizeof(float) * 6, 
-						   ( void* )( sizeof(float) * 3 ));
+						   sizeof(sVert), 
+						   ( void* )offsetof(sVert, r));
+
+	glEnableVertexAttribArray(vNormal_location);	// vNormal
+	glVertexAttribPointer(vNormal_location, 4,		// vNormal
+		GL_FLOAT, GL_FALSE,
+		sizeof(sVert),					
+		(void*)offsetof(sVert, nx));		
+
+	glEnableVertexAttribArray(vTexture_location);	// vTexture
+	glVertexAttribPointer(vTexture_location, 3,		// vTexture
+		GL_FLOAT, GL_FALSE,
+		sizeof(sVert),
+		(void*)offsetof(sVert, u));
 
 	// Now that all the parts are set up, set the VAO to zero
 	glBindVertexArray(0);
@@ -127,6 +142,8 @@ bool cVAOManager::LoadModelIntoVAO(
 
 	glDisableVertexAttribArray(vpos_location);
 	glDisableVertexAttribArray(vcol_location);
+	glDisableVertexAttribArray(vNormal_location);
+	glDisableVertexAttribArray(vTexture_location);
 
 
 	// Store the draw information into the map
@@ -214,7 +231,9 @@ bool cVAOManager::m_LoadTheModel(std::string fileName,
 	struct sVertPly
 	{
 		glm::vec3 pos;
+		glm::vec4 normal;
 		glm::vec4 colour;
+		glm::vec3 texture;
 	};
 
 	std::vector<sVertPly> vecTempPlyVerts;
@@ -225,7 +244,7 @@ bool cVAOManager::m_LoadTheModel(std::string fileName,
 		  index++ )
 	{
 		thePlyFile >> tempVert.pos.x >> tempVert.pos.y >> tempVert.pos.z;
-		
+		thePlyFile >> tempVert.normal.x >> tempVert.normal.y >> tempVert.normal.z;
 
 //		tempVert.pos.x *= 10.0f;
 //		tempVert.pos.y *= 10.0f;
@@ -235,10 +254,13 @@ bool cVAOManager::m_LoadTheModel(std::string fileName,
 		thePlyFile >> tempVert.colour.x >> tempVert.colour.y
 			       >> tempVert.colour.z >> tempVert.colour.w; 
 
+		thePlyFile >> tempVert.texture.x >> tempVert.texture.y;
+
 		// Scale the colour from 0 to 1, instead of 0 to 255
 		tempVert.colour.x /= 255.0f;
 		tempVert.colour.y /= 255.0f;
 		tempVert.colour.z /= 255.0f;
+		tempVert.colour.w /= 255.0f;
 
 		// Add too... what? 
 		vecTempPlyVerts.push_back(tempVert);
@@ -260,9 +282,18 @@ bool cVAOManager::m_LoadTheModel(std::string fileName,
 		drawInfo.pVertices[index].y = vecTempPlyVerts[index].pos.y;
 		drawInfo.pVertices[index].z = vecTempPlyVerts[index].pos.z;
 
+		drawInfo.pVertices[index].nx = vecTempPlyVerts[index].normal.x;
+		drawInfo.pVertices[index].ny = vecTempPlyVerts[index].normal.y;
+		drawInfo.pVertices[index].nz = vecTempPlyVerts[index].normal.z;
+		drawInfo.pVertices[index].nw = 1.0f;
+
 		drawInfo.pVertices[index].r = vecTempPlyVerts[index].colour.r;
 		drawInfo.pVertices[index].g = vecTempPlyVerts[index].colour.g;
 		drawInfo.pVertices[index].b = vecTempPlyVerts[index].colour.b;
+		drawInfo.pVertices[index].a = 1.0f;
+
+		drawInfo.pVertices[index].u = vecTempPlyVerts[index].texture.x;
+		drawInfo.pVertices[index].v = vecTempPlyVerts[index].texture.y;
 	}// for ( unsigned int index...
 
 

@@ -13,14 +13,16 @@
 struct sVert
 {
 	float x, y, z;		// added "z"
-	float r, g, b;
+	float nx, ny, nz, nw;
+	float r, g, b, a;
+	float u, v;
 };
 
 
 struct sModelDrawInfo
 {
 	sModelDrawInfo(); 
-
+	
 	std::string meshName;
 
 	unsigned int VAO_ID;
@@ -33,6 +35,15 @@ struct sModelDrawInfo
 	unsigned int IndexBuffer_Start_Index;
 	unsigned int numberOfIndices;
 	unsigned int numberOfTriangles;
+
+	//Extents: Largest and smallest values ("bounding box" or "hit box")
+	//float maxX, maxY, maxZ;
+	//float minX, minY, minZ;
+	//float deltaX, deltaY, deltaZ; //length of each side of the box, (min - max)
+
+	//float maxExtent;	//Largest size
+	//float scaleForUnitBoundingBox;	// 1.0/maxExtent
+
 
 	// The "local" (i.e. "CPU side" temporary array)
 	sVert* pVertices;	//  = 0;

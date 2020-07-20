@@ -1,0 +1,57 @@
+Usage:
+
+LIGHT MOVING
+	CTRL + W - Move the light forward along Z axis
+	CTRL + S - Move the light backward along Z axis
+	CTRL + A - Move the light to the left along X axis
+	CTRL + D - Move the light to the right along X axis
+	CTRL + Q - Move the light up along Y axis
+	CTRL + E - Move the light down along Y axis
+
+CHANGE LIGHT COLOUR
+	CTRL + J - Select the colour to change
+	CTRL + L - Select the colour to change
+	CTRL + I - Increase selected colour
+	CTRL + K - Decrease selected colour
+
+ADJUST LINEAR ANNUTENTION
+	CTRL + Z - Decrease
+	CTRL + X - Increase
+
+FILE INPUT/ OUTPUT
+	[ - Save information to file
+	] - Load information
+
+SELECT OBJECT
+	V - Next object
+	C - Previous object
+
+SWITCH SOLID/ WIREFRAME
+	0 - Switch for selected object
+	9 - Switch for all objects
+
+SCALE OBJECT
+	M - Scale up
+	N - Scale down
+
+TRANSLATE OBJECT
+	↑ - Move up
+	↓ - Move down	
+	→ - Move right
+	← - Move left
+
+ROTATE OBJECT
+	I - Rotate forward
+	K - Rotate back
+	J - Rotate left
+	L - Rotate right
+	U - Rotate up
+	O - Rotate down
+
+CAMERA CONTROLLER
+	A - Go left
+	D - Go right
+	W - Go forward
+	S - Go back
+	Q - Go up
+	E - Go down

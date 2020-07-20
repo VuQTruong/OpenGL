@@ -12,10 +12,22 @@
 // So dictated from THE SHADER
 struct sVert
 {
-	float x, y, z;		// added "z"
+	//Adding contructor
+	sVert() {
+		this->x = this->y = this->z = this->w = 0.0f;
+		this->r = this->g = this->b = this->a = 0.0f;
+		this->nx = this->ny = this->nz = this->nw = 0.0f;
+		this->u1 = this->v1 = this->u2 = this->v2 = 0.0f;
+		return;
+	}
+
+	//float x, y, z;		// added "z"
+	//float r, g, b;
+
+	float x, y, z, w;	
 	float nx, ny, nz, nw;
 	float r, g, b, a;
-	float u, v;
+	float u1, v1, u2, v2;
 };
 
 
@@ -37,12 +49,12 @@ struct sModelDrawInfo
 	unsigned int numberOfTriangles;
 
 	//Extents: Largest and smallest values ("bounding box" or "hit box")
-	//float maxX, maxY, maxZ;
-	//float minX, minY, minZ;
-	//float deltaX, deltaY, deltaZ; //length of each side of the box, (min - max)
+	float maxX, maxY, maxZ;
+	float minX, minY, minZ;
+	float deltaX, deltaY, deltaZ; //length of each side of the box, (min - max)
 
-	//float maxExtent;	//Largest size
-	//float scaleForUnitBoundingBox;	// 1.0/maxExtent
+	float maxExtent;	//Largest size
+	float scaleForUnitBoundingBox;	// 1.0/maxExtent
 
 
 	// The "local" (i.e. "CPU side" temporary array)

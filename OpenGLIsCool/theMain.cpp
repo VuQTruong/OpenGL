@@ -22,11 +22,25 @@
 #include "cMeshObject.h"
 
 //Camera
-glm::vec3 g_cameraEye = glm::vec3(0.0, 0.0, +50.0f);
+glm::vec3 g_cameraEye = glm::vec3(0.0, 0.0, +100.0f);
 glm::vec3 g_cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 g_upVector = glm::vec3(0.0f, 1.0f, 0.0f);
 
 
+//This structure is used to match what's in the shader
+struct sLight
+{
+    glm::vec4 position;
+    glm::vec4 diffuse;
+    glm::vec4 specular;	// rgb = highlight colour, w = power
+    glm::vec4 atten;		// x = constant, y = linear, z = quadratic, w = DistanceCutOff
+    glm::vec4 direction;	// Spot, directional lights
+    glm::vec4 param1;	// x = lightType, y = inner angle, z = outer angle, w = TBD
+                    // 0 = pointlight
+                    // 1 = spot light
+                    // 2 = directional light
+    glm::vec4 param2;	// x = 0 for off, 1 for on
+};
 
 //static const struct sVertex
 //{
@@ -66,6 +80,20 @@ glm::vec3 g_upVector = glm::vec3(0.0f, 1.0f, 0.0f);
 //"{\n"
 //"    gl_FragColor = vec4(color, 1.0);\n"
 //"}\n";
+
+//Lighting position
+float g_lightX = 50.0f;
+float g_lightY = 100.0f;
+float g_lightZ = 100.0f;
+float g_lightW = 1.0f;
+
+//Lighting attenuation
+float g_linearAtten = 0.0f;
+
+//Lighting colour
+std::vector<float> g_lightColour;
+int g_selectedColour = 0;
+std::string g_colour_str = "Red";
 
 //The objects we are drawing go in here
 std::vector<cMeshObject*> g_pVecObjects;
@@ -313,8 +341,6 @@ static void error_callback(int error, const char* description)
 }
 
 
-
-
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     float const CAMERA_SPEED = 1.0f;
@@ -322,70 +348,170 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     float const ROTATE_LEVEL = 1.0f;
     float const TRANSLATE_LEVEL = 0.5f;
 
+    float const LIGHT_SPEED = 10.0f;
+    float const COLOUR_CHANGING_LEVEL = 0.05f;
+
+    float const LINEAR_ATTEN_INC_LEVEL = 1.01f;
+    float const LINEAR_ATTEN_DEC_LEVEL = 0.99f;
+
     if (action != GLFW_RELEASE) 
     {
-        switch (key)
+        if (mods != GLFW_MOD_CONTROL)
         {
-        /******************* SELECT OBJECT **********************/
-        case GLFW_KEY_V:
-            ::g_selectedObject++;
-            ::g_selectedObject = ::g_selectedObject == ::g_pVecObjects.size() ? 0 : ::g_selectedObject;
-            std::cout << "Selected object: " << ::g_selectedObject + 1 << std::endl;
-            break;
-        case GLFW_KEY_C:
-            ::g_selectedObject--;
-            ::g_selectedObject = ::g_selectedObject == -1 ? ::g_pVecObjects.size() - 1 : ::g_selectedObject;
-            std::cout << "Selected object: " << ::g_selectedObject + 1 << std::endl;
-            break;
-
-        /*************** SCALE SELECTED OBJECT ******************/
-        case GLFW_KEY_M: ::g_pVecObjects[::g_selectedObject]->scale += SCALE_LEVEL; break;    //Scale up
-        case GLFW_KEY_N: ::g_pVecObjects[::g_selectedObject]->scale -= SCALE_LEVEL; break;     //Scale down
-        
-        /************* TRANSLATE SELECTED OBJECT ****************/
-        case GLFW_KEY_UP: ::g_pVecObjects[::g_selectedObject]->position.y += TRANSLATE_LEVEL; break;   //Move up
-        case GLFW_KEY_DOWN: ::g_pVecObjects[::g_selectedObject]->position.y -= TRANSLATE_LEVEL; break;   //Move down
-        case GLFW_KEY_LEFT: ::g_pVecObjects[::g_selectedObject]->position.x -= TRANSLATE_LEVEL; break;   //Move left
-        case GLFW_KEY_RIGHT: ::g_pVecObjects[::g_selectedObject]->position.x += TRANSLATE_LEVEL; break;   //Move right
-        
-        /************* ROTATE SELECTED OBJECT ****************/
-        case GLFW_KEY_J: ::g_pVecObjects[::g_selectedObject]->orientation.z += glm::radians(ROTATE_LEVEL); break; //Rotate z+
-        case GLFW_KEY_L: ::g_pVecObjects[::g_selectedObject]->orientation.z -= glm::radians(ROTATE_LEVEL); break; //Rotate z-
-        case GLFW_KEY_I: ::g_pVecObjects[::g_selectedObject]->orientation.x -= glm::radians(ROTATE_LEVEL); break; //Rotate x-
-        case GLFW_KEY_K: ::g_pVecObjects[::g_selectedObject]->orientation.x += glm::radians(ROTATE_LEVEL); break; //Rotate x+
-        case GLFW_KEY_U: ::g_pVecObjects[::g_selectedObject]->orientation.y += glm::radians(ROTATE_LEVEL); break; //Rotate y+
-        case GLFW_KEY_O: ::g_pVecObjects[::g_selectedObject]->orientation.y -= glm::radians(ROTATE_LEVEL); break; //Rotate y-
-
-        /************* CAMERA CONTROLLER ****************/
-        case GLFW_KEY_A: ::g_cameraEye.x -= CAMERA_SPEED; break;   //Move left
-        case GLFW_KEY_D: ::g_cameraEye.x += CAMERA_SPEED; break;   //Move right
-        case GLFW_KEY_W: ::g_cameraEye.z += CAMERA_SPEED; break;   //Move forward
-        case GLFW_KEY_S: ::g_cameraEye.z -= CAMERA_SPEED; break;   //Move back
-        case GLFW_KEY_Q: ::g_cameraEye.y += CAMERA_SPEED; break;   //Move up
-        case GLFW_KEY_E: ::g_cameraEye.y -= CAMERA_SPEED; break;   //Move down
-
-        /************* SWITCH SOLID/ WIREFRAME ****************/
-        case GLFW_KEY_9:    //Switch all objects
-            for (std::vector<cMeshObject*>::iterator it_object = ::g_pVecObjects.begin();
-                it_object != ::g_pVecObjects.end(); it_object++)
+            switch (key)
             {
-                (*it_object)->isWireFrame = !(*it_object)->isWireFrame ? true : false;
+                /******************* SELECT OBJECT **********************/
+            case GLFW_KEY_V:
+                ::g_selectedObject++;
+                ::g_selectedObject = ::g_selectedObject == ::g_pVecObjects.size() ? 0 : ::g_selectedObject;
+                std::cout << "Selected object: " << ::g_selectedObject + 1 << std::endl;
+                break;
+            case GLFW_KEY_C:
+                ::g_selectedObject--;
+                ::g_selectedObject = ::g_selectedObject == -1 ? static_cast<int>(::g_pVecObjects.size()) - 1 : ::g_selectedObject;
+                std::cout << "Selected object: " << ::g_selectedObject + 1 << std::endl;
+                break;
+
+                /*************** SCALE SELECTED OBJECT ******************/
+            case GLFW_KEY_M: ::g_pVecObjects[::g_selectedObject]->scale += SCALE_LEVEL; break;    //Scale up
+            case GLFW_KEY_N: ::g_pVecObjects[::g_selectedObject]->scale -= SCALE_LEVEL; break;     //Scale down
+
+            /************* TRANSLATE SELECTED OBJECT ****************/
+            case GLFW_KEY_UP: ::g_pVecObjects[::g_selectedObject]->position.y += TRANSLATE_LEVEL; break;   //Move up
+            case GLFW_KEY_DOWN: ::g_pVecObjects[::g_selectedObject]->position.y -= TRANSLATE_LEVEL; break;   //Move down
+            case GLFW_KEY_LEFT: ::g_pVecObjects[::g_selectedObject]->position.x -= TRANSLATE_LEVEL; break;   //Move left
+            case GLFW_KEY_RIGHT: ::g_pVecObjects[::g_selectedObject]->position.x += TRANSLATE_LEVEL; break;   //Move right
+
+            /************* ROTATE SELECTED OBJECT ****************/
+            case GLFW_KEY_J: ::g_pVecObjects[::g_selectedObject]->orientation.z += glm::radians(ROTATE_LEVEL); break; //Rotate z+
+            case GLFW_KEY_L: ::g_pVecObjects[::g_selectedObject]->orientation.z -= glm::radians(ROTATE_LEVEL); break; //Rotate z-
+            case GLFW_KEY_I: ::g_pVecObjects[::g_selectedObject]->orientation.x -= glm::radians(ROTATE_LEVEL); break; //Rotate x-
+            case GLFW_KEY_K: ::g_pVecObjects[::g_selectedObject]->orientation.x += glm::radians(ROTATE_LEVEL); break; //Rotate x+
+            case GLFW_KEY_U: ::g_pVecObjects[::g_selectedObject]->orientation.y += glm::radians(ROTATE_LEVEL); break; //Rotate y+
+            case GLFW_KEY_O: ::g_pVecObjects[::g_selectedObject]->orientation.y -= glm::radians(ROTATE_LEVEL); break; //Rotate y-
+
+            /************* CAMERA CONTROLLER ****************/
+            case GLFW_KEY_A: ::g_cameraEye.x -= CAMERA_SPEED; break;   //Move left
+            case GLFW_KEY_D: ::g_cameraEye.x += CAMERA_SPEED; break;   //Move right
+            case GLFW_KEY_W: ::g_cameraEye.z += CAMERA_SPEED; break;   //Move forward
+            case GLFW_KEY_S: ::g_cameraEye.z -= CAMERA_SPEED; break;   //Move back
+            case GLFW_KEY_Q: ::g_cameraEye.y += CAMERA_SPEED; break;   //Move up
+            case GLFW_KEY_E: ::g_cameraEye.y -= CAMERA_SPEED; break;   //Move down
+
+            /************* SWITCH SOLID/ WIREFRAME ****************/
+            case GLFW_KEY_9:    //Switch all objects
+                for (std::vector<cMeshObject*>::iterator it_object = ::g_pVecObjects.begin();
+                    it_object != ::g_pVecObjects.end(); it_object++)
+                {
+                    (*it_object)->isWireFrame = !(*it_object)->isWireFrame ? true : false;
+                }
+                break;
+            case GLFW_KEY_0:    //Switch selected object
+                ::g_pVecObjects[::g_selectedObject]->isWireFrame = !::g_pVecObjects[::g_selectedObject]->isWireFrame ? true : false;
+                break;
+
+
+                /************* SAVE OBJECTS TO FILE ****************/
+            case GLFW_KEY_LEFT_BRACKET: SaveToFile(); break;
+
+                /************* READ OBJECTS TO FILE ****************/
+            case GLFW_KEY_RIGHT_BRACKET: ReadFromFile(); break;
+
+            default:
+                break;
             }
-            break;    
-        case GLFW_KEY_0:    //Switch selected object
-            ::g_pVecObjects[::g_selectedObject]->isWireFrame = !::g_pVecObjects[::g_selectedObject]->isWireFrame ? true : false;
-            break;   
+        }
+        else
+        {
+            /******************* LIGHT CONTROLLER **********************/
+            switch (key)
+            {
+            /******************* LIGHT POSITION **********************/
+            case GLFW_KEY_W: 
+                ::g_lightZ += LIGHT_SPEED; 
+                std::cout << "Light Position: " << ::g_lightX << ", " << ::g_lightY << ", " << ::g_lightZ << std::endl;
+                break;
+            case GLFW_KEY_S: 
+                ::g_lightZ -= LIGHT_SPEED; 
+                std::cout << "Light Position: " << ::g_lightX << ", " << ::g_lightY << ", " << ::g_lightZ << std::endl;
+                break;
+            case GLFW_KEY_A: 
+                ::g_lightX += LIGHT_SPEED; 
+                std::cout << "Light Position: " << ::g_lightX << ", " << ::g_lightY << ", " << ::g_lightZ << std::endl;
+                break;
+            case GLFW_KEY_D: 
+                ::g_lightX -= LIGHT_SPEED; 
+                std::cout << "Light Position: " << ::g_lightX << ", " << ::g_lightY << ", " << ::g_lightZ << std::endl;
+                break;
+            case GLFW_KEY_Q: 
+                ::g_lightY += LIGHT_SPEED; 
+                std::cout << "Light Position: " << ::g_lightX << ", " << ::g_lightY << ", " << ::g_lightZ << std::endl;
+                break;
+            case GLFW_KEY_E: 
+                ::g_lightY -= LIGHT_SPEED;
+                std::cout << "Light Position: " << ::g_lightX << ", " << ::g_lightY << ", " << ::g_lightZ << std::endl;
+                break;
 
+            /******************* LIGHT LINEAR ATTENUATION **********************/
+            case GLFW_KEY_X: 
+                ::g_linearAtten *= LINEAR_ATTEN_INC_LEVEL;
+                ::g_linearAtten = ::g_linearAtten > 1 ? 0.001f : ::g_linearAtten;
+                std::cout << "Linear: " << ::g_linearAtten << std::endl;
+                break;
+            case GLFW_KEY_Z: 
+                ::g_linearAtten *= LINEAR_ATTEN_DEC_LEVEL;
+                ::g_linearAtten = ::g_linearAtten < 0.001f ? 1.0f : ::g_linearAtten;
+                std::cout << "Linear: " << ::g_linearAtten << std::endl;
+                break;
 
-        /************* SAVE OBJECTS TO FILE ****************/
-        case GLFW_KEY_LEFT_BRACKET: SaveToFile(); break;
+            /******************* LIGHT COLOUR **********************/
+            //COLOUR SELECTOR
+            case GLFW_KEY_L: 
+                ::g_selectedColour++;
+                ::g_selectedColour = ::g_selectedColour == ::g_lightColour.size() ? 0 : ::g_selectedColour;
+                
+                if (::g_selectedColour == 0) ::g_colour_str = "Red";
+                else if (::g_selectedColour == 1) ::g_colour_str = "Green";
+                else if (::g_selectedColour == 2) ::g_colour_str = "Blue";
+                else if (::g_selectedColour == 3) ::g_colour_str = "Alpha";
+                
+                std::cout << "Selected colour: " << ::g_colour_str << std::endl;
+                break;
+            case GLFW_KEY_J: 
+                ::g_selectedColour--;
+                ::g_selectedColour = ::g_selectedColour == -1 ? static_cast<int>(::g_lightColour.size()) - 1 : ::g_selectedColour;
 
-        /************* READ OBJECTS TO FILE ****************/
-        case GLFW_KEY_RIGHT_BRACKET: ReadFromFile(); break;
+                if (::g_selectedColour == 0) ::g_colour_str = "Red";
+                else if (::g_selectedColour == 1) ::g_colour_str = "Green";
+                else if (::g_selectedColour == 2) ::g_colour_str = "Blue";
+                else if (::g_selectedColour == 3) ::g_colour_str = "Alpha";
 
+                std::cout << "Selected colour: " << ::g_colour_str << std::endl;
+                break;
 
-        default:
-            break;
+            //COLOUR MODIFIER
+            case GLFW_KEY_I: 
+                ::g_lightColour[::g_selectedColour] += COLOUR_CHANGING_LEVEL;
+                ::g_lightColour[::g_selectedColour] = ::g_lightColour[::g_selectedColour] > 1.0f ? 0.0f : ::g_lightColour[::g_selectedColour];
+                std::cout << "Light colour: " << 
+                    ::g_lightColour[0] << ", " <<
+                    ::g_lightColour[1] << ", " <<
+                    ::g_lightColour[2] << ", " <<
+                    ::g_lightColour[3] << std::endl;
+                break;
+            case GLFW_KEY_K: 
+                ::g_lightColour[::g_selectedColour] -= COLOUR_CHANGING_LEVEL;
+                ::g_lightColour[::g_selectedColour] = ::g_lightColour[::g_selectedColour] < 0.0f ? 1.0f : ::g_lightColour[::g_selectedColour];
+                std::cout << "Light colour: " <<
+                    ::g_lightColour[0] << ", " <<
+                    ::g_lightColour[1] << ", " <<
+                    ::g_lightColour[2] << ", " <<
+                    ::g_lightColour[3] << std::endl;
+                break;
+
+            default:
+                break;
+            }
         }
     }
 
@@ -498,11 +624,23 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 int main(void)
 {
+    //Adding light RGB to light colour vector
+    float lightR = 1.0f;
+    float lightG = 1.0f;
+    float lightB = 1.0f;
+    float lightA = 1.0f;
+    ::g_lightColour.push_back(lightR);
+    ::g_lightColour.push_back(lightG);
+    ::g_lightColour.push_back(lightB);
+    ::g_lightColour.push_back(lightA);
+
     std::cout << "Selected object: " << ::g_selectedObject + 1 << std::endl;
+    std::cout << "Selected colour: " << ::g_colour_str << std::endl;
     //ProcessingGraphicFile("assets/models/bun_zipper_res4_xyz_colour.ply");
 
     GLFWwindow* window;
-    GLuint vertex_buffer, vertex_shader, fragment_shader, program;
+    //GLuint vertex_buffer, vertex_shader, fragment_shader;
+    GLuint program;
     GLint mvp_location, vpos_location, vcol_location;
 
     glfwSetErrorCallback(error_callback);
@@ -612,27 +750,34 @@ int main(void)
     //        mdiRabbit, program);
     //}
     
-    //// Load the space shuttle, too
-    //sModelDrawInfo mdiSpaceShuttle;
-    //if (!::g_pVAOManager->LoadModelIntoVAO("assets/models/SpaceShuttleOrbiter_xyz_rgba.ply",
-    //    mdiSpaceShuttle, program)) 
-    //{
-    //    std::cout << "Error: " << ::g_pVAOManager->getLastError() << std::endl;
-    //}
-    //
-    //sModelDrawInfo mdiMountainTerrain;
-    //if (!::g_pVAOManager->LoadModelIntoVAO("assets/models/Mountain_Terrain_xyz_rgba.ply",
-    //    mdiSpaceShuttle, program)) 
-    //{
-    //    std::cout << "Error: " << ::g_pVAOManager->getLastError() << std::endl;
-    //}
+    // Load the space shuttle, too
+    sModelDrawInfo mdiSpaceShuttle;
+    if (!::g_pVAOManager->LoadModelIntoVAO("assets/models/SpaceShuttleOrbiter_xyz_n_rgba_uv.ply",
+        mdiSpaceShuttle, program)) 
+    {
+        std::cout << "Error: " << ::g_pVAOManager->getLastError() << std::endl;
+    }
+    
+    sModelDrawInfo mdiMountainTerrain;
+    if (!::g_pVAOManager->LoadModelIntoVAO("assets/models/Mountain_Terrain_xyz_n_rgba_uv.ply",
+        mdiSpaceShuttle, program)) 
+    {
+        std::cout << "Error: " << ::g_pVAOManager->getLastError() << std::endl;
+    }
 
-    sModelDrawInfo mdiDolphin;
+    sModelDrawInfo mdiArena;
+    if (!::g_pVAOManager->LoadModelIntoVAO("assets/models/free_arena_ASCII_xyz_n_rgba_uv.ply",
+        mdiArena, program))
+    {
+        std::cout << "Error: " << ::g_pVAOManager->getLastError() << std::endl;
+    }
+
+    /*sModelDrawInfo mdiDolphin;
     if (!::g_pVAOManager->LoadModelIntoVAO("assets/models/dolphin_xyz_n_rgba_uv.ply",
         mdiDolphin, program))
     {
         std::cout << "Error: " << ::g_pVAOManager->getLastError() << std::endl;
-    }
+    }*/
     /****************************************************************************************************************/
 
 
@@ -668,102 +813,119 @@ int main(void)
     //pArena->position.y = -20.0f;
     //pArena->scale = 1.0f;
     //::g_pVecObjects.push_back(pArena);
-    /*
+    
     cMeshObject* pShuttle01 = new cMeshObject();
-    pShuttle01->meshName = "assets/models/SpaceShuttleOrbiter_xyz_rgba.ply";
+    pShuttle01->meshName = "assets/models/SpaceShuttleOrbiter_xyz_n_rgba_uv.ply";
     pShuttle01->position.x = +30.0f;
-    pShuttle01->position.y = +10.0f;
+    pShuttle01->position.y = +20.0f;
     pShuttle01->scale = 1.0f / 100.0f;    // 100th of it's normal size
     pShuttle01->orientation.z = glm::radians(0.0f);
-    pShuttle01->colourRGBA = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
+    pShuttle01->colourRGBA = glm::vec4(0.0f, 1.0f, 1.0f, 1.0f);
     ::g_pVecObjects.push_back(pShuttle01);
 
     cMeshObject* pShuttle02 = new cMeshObject();
-    pShuttle02->meshName = "assets/models/SpaceShuttleOrbiter_xyz_rgba.ply";
+    pShuttle02->meshName = "assets/models/SpaceShuttleOrbiter_xyz_n_rgba_uv.ply";
     pShuttle02->position.x = +15.0f;
-    pShuttle02->position.y = +10.0f;
+    pShuttle02->position.y = +20.0f;
     pShuttle02->scale = 1.0f / 100.0f;    // 100th of it's normal size
     pShuttle02->orientation.z = glm::radians(0.0f);
+    pShuttle02->colourRGBA = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     ::g_pVecObjects.push_back(pShuttle02);
 
-    cMeshObject* pShuttle03 = new cMeshObject();
-    pShuttle03->meshName = "assets/models/SpaceShuttleOrbiter_xyz_rgba.ply";
-    pShuttle03->position.x = +0.0f;
-    pShuttle03->position.y = +10.0f;
-    pShuttle03->scale = 1.0f / 100.0f;    // 100th of it's normal size
-    pShuttle03->orientation.z = glm::radians(0.0f);
-    ::g_pVecObjects.push_back(pShuttle03);
-
-    cMeshObject* pShuttle04 = new cMeshObject();
-    pShuttle04->meshName = "assets/models/SpaceShuttleOrbiter_xyz_rgba.ply";
-    pShuttle04->position.x = -15.0f;
-    pShuttle04->position.y = +10.0f;
-    pShuttle04->scale = 1.0f / 100.0f;    // 100th of it's normal size
-    pShuttle04->orientation.z = glm::radians(0.0f);
-    ::g_pVecObjects.push_back(pShuttle04);
-
-    cMeshObject* pShuttle05 = new cMeshObject();
-    pShuttle05->meshName = "assets/models/SpaceShuttleOrbiter_xyz_rgba.ply";
-    pShuttle05->position.x = -30.0f;
-    pShuttle05->position.y = +10.0f;
-    pShuttle05->scale = 1.0f / 100.0f;    // 100th of it's normal size
-    pShuttle05->orientation.z = glm::radians(0.0f);
-    ::g_pVecObjects.push_back(pShuttle05);
-
-    cMeshObject* pShuttle06 = new cMeshObject();
-    pShuttle06->meshName = "assets/models/SpaceShuttleOrbiter_xyz_rgba.ply";
-    pShuttle06->position.x = +30.0f;
-    pShuttle06->position.y = -10.0f;
-    pShuttle06->scale = 1.0f / 100.0f;    // 100th of it's normal size
-    pShuttle06->orientation.z = glm::radians(0.0f);
-    ::g_pVecObjects.push_back(pShuttle06);
-
-    cMeshObject* pShuttle07 = new cMeshObject();
-    pShuttle07->meshName = "assets/models/SpaceShuttleOrbiter_xyz_rgba.ply";
-    pShuttle07->position.x = +15.0f;
-    pShuttle07->position.y = -10.0f;
-    pShuttle07->scale = 1.0f / 100.0f;    // 100th of it's normal size
-    pShuttle07->orientation.z = glm::radians(0.0f);
-    ::g_pVecObjects.push_back(pShuttle07);
-
-    cMeshObject* pShuttle08 = new cMeshObject();
-    pShuttle08->meshName = "assets/models/SpaceShuttleOrbiter_xyz_rgba.ply";
-    pShuttle08->position.x = +0.0f;
-    pShuttle08->position.y = -10.0f;
-    pShuttle08->scale = 1.0f / 100.0f;    // 100th of it's normal size
-    pShuttle08->orientation.z = glm::radians(0.0f);
-    ::g_pVecObjects.push_back(pShuttle08);
-
-    cMeshObject* pShuttle09 = new cMeshObject();
-    pShuttle09->meshName = "assets/models/SpaceShuttleOrbiter_xyz_rgba.ply";
-    pShuttle09->position.x = -15.0f;
-    pShuttle09->position.y = -10.0f;
-    pShuttle09->scale = 1.0f / 100.0f;    // 100th of it's normal size
-    pShuttle09->orientation.z = glm::radians(0.0f);
-    ::g_pVecObjects.push_back(pShuttle09);
-
-    cMeshObject* pShuttle10 = new cMeshObject();
-    pShuttle10->meshName = "assets/models/SpaceShuttleOrbiter_xyz_rgba.ply";
-    pShuttle10->position.x = -30.0f;
-    pShuttle10->position.y = -10.0f;
-    pShuttle10->scale = 1.0f / 100.0f;    // 100th of it's normal size
-    pShuttle10->orientation.z = glm::radians(0.0f);
-    ::g_pVecObjects.push_back(pShuttle10);
+    //cMeshObject* pShuttle03 = new cMeshObject();
+    //pShuttle03->meshName = "assets/models/SpaceShuttleOrbiter_xyz_n_rgba_uv.ply";
+    //pShuttle03->position.x = +0.0f;
+    //pShuttle03->position.y = +10.0f;
+    //pShuttle03->scale = 1.0f / 100.0f;    // 100th of it's normal size
+    //pShuttle03->orientation.z = glm::radians(0.0f);
+    //pShuttle03->colourRGBA = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    //::g_pVecObjects.push_back(pShuttle03);
+//
+    //cMeshObject* pShuttle04 = new cMeshObject();
+    //pShuttle04->meshName = "assets/models/SpaceShuttleOrbiter_xyz_n_rgba_uv.ply";
+    //pShuttle04->position.x = -15.0f;
+    //pShuttle04->position.y = +10.0f;
+    //pShuttle04->scale = 1.0f / 100.0f;    // 100th of it's normal size
+    //pShuttle04->orientation.z = glm::radians(0.0f);
+    //pShuttle04->colourRGBA = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    //::g_pVecObjects.push_back(pShuttle04);
+//
+    //cMeshObject* pShuttle05 = new cMeshObject();
+    //pShuttle05->meshName = "assets/models/SpaceShuttleOrbiter_xyz_n_rgba_uv.ply";
+    //pShuttle05->position.x = -30.0f;
+    //pShuttle05->position.y = +10.0f;
+    //pShuttle05->scale = 1.0f / 100.0f;    // 100th of it's normal size
+    //pShuttle05->orientation.z = glm::radians(0.0f);
+    //pShuttle05->colourRGBA = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    //::g_pVecObjects.push_back(pShuttle05);
+//
+    //cMeshObject* pShuttle06 = new cMeshObject();
+    //pShuttle06->meshName = "assets/models/SpaceShuttleOrbiter_xyz_n_rgba_uv.ply";
+    //pShuttle06->position.x = +30.0f;
+    //pShuttle06->position.y = -10.0f;
+    //pShuttle06->scale = 1.0f / 100.0f;    // 100th of it's normal size
+    //pShuttle06->orientation.z = glm::radians(0.0f);
+    //pShuttle06->colourRGBA = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    //::g_pVecObjects.push_back(pShuttle06);
+//
+    //cMeshObject* pShuttle07 = new cMeshObject();
+    //pShuttle07->meshName = "assets/models/SpaceShuttleOrbiter_xyz_n_rgba_uv.ply";
+    //pShuttle07->position.x = +15.0f;
+    //pShuttle07->position.y = -10.0f;
+    //pShuttle07->scale = 1.0f / 100.0f;    // 100th of it's normal size
+    //pShuttle07->orientation.z = glm::radians(0.0f);
+    //pShuttle07->colourRGBA = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    //::g_pVecObjects.push_back(pShuttle07);
+//
+    //cMeshObject* pShuttle08 = new cMeshObject();
+    //pShuttle08->meshName = "assets/models/SpaceShuttleOrbiter_xyz_n_rgba_uv.ply";
+    //pShuttle08->position.x = +0.0f;
+    //pShuttle08->position.y = -10.0f;
+    //pShuttle08->scale = 1.0f / 100.0f;    // 100th of it's normal size
+    //pShuttle08->orientation.z = glm::radians(0.0f);
+    //pShuttle08->colourRGBA = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    //::g_pVecObjects.push_back(pShuttle08);
+//
+    //cMeshObject* pShuttle09 = new cMeshObject();
+    //pShuttle09->meshName = "assets/models/SpaceShuttleOrbiter_xyz_n_rgba_uv.ply";
+    //pShuttle09->position.x = -15.0f;
+    //pShuttle09->position.y = -10.0f;
+    //pShuttle09->scale = 1.0f / 100.0f;    // 100th of it's normal size
+    //pShuttle09->orientation.z = glm::radians(0.0f);
+    //pShuttle09->colourRGBA = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    //::g_pVecObjects.push_back(pShuttle09);
+//
+    //cMeshObject* pShuttle10 = new cMeshObject();
+    //pShuttle10->meshName = "assets/models/SpaceShuttleOrbiter_xyz_n_rgba_uv.ply";
+    //pShuttle10->position.x = -30.0f;
+    //pShuttle10->position.y = -10.0f;
+    //pShuttle10->scale = 1.0f / 100.0f;    // 100th of it's normal size
+    //pShuttle10->orientation.z = glm::radians(0.0f);
+    //pShuttle10->colourRGBA = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    //::g_pVecObjects.push_back(pShuttle10);
 
     cMeshObject* pMountainTerrain = new cMeshObject();
-    pMountainTerrain->meshName = "assets/models/Mountain_Terrain_xyz_rgba.ply";
-    pMountainTerrain->position.x = -100.0f;
-    pMountainTerrain->position.y = 0.0f;
+    pMountainTerrain->meshName = "assets/models/Mountain_Terrain_xyz_n_rgba_uv.ply";
+    pMountainTerrain->position.x = 0.0f;
+    pMountainTerrain->position.y = -50.0f;
+    pMountainTerrain->colourRGBA = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     ::g_pVecObjects.push_back(pMountainTerrain);
-    */
 
-    cMeshObject* pDolphin = new cMeshObject();
-    pDolphin->meshName = "assets/models/dolphin_xyz_n_rgba_uv.ply";
-    pDolphin->position.x = +0.0f;
-    pDolphin->position.y = +0.0f;
-    //pDolphin->colourRGBA = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-    pDolphin->scale = 1.0f/50.0f;
-    ::g_pVecObjects.push_back(pDolphin);
+    cMeshObject* pArena = new cMeshObject();
+    pArena->meshName = "assets/models/free_arena_ASCII_xyz_n_rgba_uv.ply";
+    pArena->position.x = 0.0f;
+    pArena->position.y = -10.0f;
+    pArena->colourRGBA = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    ::g_pVecObjects.push_back(pArena);
+    
+
+    //cMeshObject* pDolphin = new cMeshObject();
+    //pDolphin->meshName = "assets/models/dolphin_xyz_n_rgba_uv.ply";
+    //pDolphin->position.x = +0.0f;
+    //pDolphin->position.y = +0.0f;
+    ////pDolphin->colourRGBA = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+    //pDolphin->scale = 1.0f/50.0f;
+    //::g_pVecObjects.push_back(pDolphin);
     /****************************************************************************************************************/
 
     //glEnableVertexAttribArray(vpos_location);
@@ -785,15 +947,31 @@ int main(void)
     //                        (void*)offsetof(sVertex, r));
 
     //Get the location of the "uniform" variable which control the colour of an object
-    //GLint objectColour_LocID = glGetUniformLocation(program, "objectColour");
+    GLint diffuseColour_LocID = glGetUniformLocation(program, "diffuseColour");
+
+    GLint matModel_LocID = glGetUniformLocation(program, "matModel");
+    GLint matProjection_LocID = glGetUniformLocation(program, "matProj");
+    GLint matView_LocID = glGetUniformLocation(program, "matView");
+
+    //Get the uniform locations for the light
+    GLint theLights_0_position_LocID = glGetUniformLocation(program, "theLights[0].position");
+    GLint theLights_0_diffuse_LocID = glGetUniformLocation(program, "theLights[0].diffuse");
+    GLint theLights_0_specular_LocID = glGetUniformLocation(program, "theLights[0].specular");
+    GLint theLights_0_atten_LocID = glGetUniformLocation(program, "theLights[0].atten");
+    GLint theLights_0_direction_LocID = glGetUniformLocation(program, "theLights[0].direction");
+    GLint theLights_0_param1_LocID = glGetUniformLocation(program, "theLights[0].param1");
+    GLint theLights_0_param2_LocID = glGetUniformLocation(program, "theLights[0].param2");
 
     while (!glfwWindowShouldClose(window))
     {
         float ratio;
         int width, height;
         //       mat4x4 m, p, mvp;
-        glm::mat4 matModel, p, v, mvp;
-//        glm::mat4 matModel, p, v, mvp;
+        glm::mat4 matModel;
+        glm::mat4 matProjection;
+        glm::mat4 matView;
+        //glm::mat4 mvp;
+//        glm::mat4 matModel, p, v, mvp;    
 
         glfwGetFramebufferSize(window, &width, &height);
         ratio = width / (float)height;
@@ -814,21 +992,31 @@ int main(void)
         //m = m * rotateZ;
 
         //mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-        p = glm::perspective(0.6f,
-            ratio,
-            0.1f,
-            10000.0f);
+        matProjection = glm::perspective(   0.6f,
+                                            ratio,
+                                            0.1f,
+                                            10000.0f);
 
-        v = glm::mat4(1.0f);
+        matView = glm::mat4(1.0f);
 
         /*glm::vec3 cameraEye = glm::vec3(0.0, 0.0, -4.0f);
         glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
         glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);*/
 
-        v = glm::lookAt(::g_cameraEye,
+        matView = glm::lookAt(::g_cameraEye,
                         ::g_cameraTarget,
                         ::g_upVector);
 
+
+        //Set the light's values
+        glUniform4f(theLights_0_position_LocID, ::g_lightX, ::g_lightY, ::g_lightZ, ::g_lightW);
+        //glUniform4f(theLights_0_diffuse_LocID, ::g_lightR, ::g_lightG, ::g_lightB, ::g_lightA);
+        glUniform4f(theLights_0_diffuse_LocID, ::g_lightColour[0], ::g_lightColour[1], ::g_lightColour[2], ::g_lightColour[3]);
+        glUniform4f(theLights_0_specular_LocID, 1.0f, 1.0f, 1.0f, 1.0f);
+        glUniform4f(theLights_0_atten_LocID, 0.0f, ::g_linearAtten, 0.0f, 1.0f);  
+        glUniform4f(theLights_0_direction_LocID, 0.0f, 0.0f, 0.0f, 1.0f);
+        glUniform4f(theLights_0_param1_LocID, 0.0f, 0.0f, 0.0f, 0.0f);
+        glUniform4f(theLights_0_param2_LocID, 1.0f, 0.0f, 0.0f, 1.0f);
 
         /******************************************** DRAW ALL OBJECTS HERE ****************************************/
         for (std::vector<cMeshObject*>::iterator it_curMesh = ::g_pVecObjects.begin();
@@ -889,12 +1077,17 @@ int main(void)
 
             /******************************** MODEL TRANSLATION *************************************/
            
-            
-            //mat4x4_mul(mvp, p, m);
-            mvp = p * v * matModel;
-
             glUseProgram(program);
 
+            //mat4x4_mul(mvp, p, m);
+            //mvp = matProjection * matView * matModel;
+            //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
+            //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(mvp));
+            
+            //This does the copying part, which copies data from local variable to variable on GPU
+            glUniformMatrix4fv(matModel_LocID, 1, GL_FALSE, glm::value_ptr(matModel));
+            glUniformMatrix4fv(matProjection_LocID, 1, GL_FALSE, glm::value_ptr(matProjection));
+            glUniformMatrix4fv(matView_LocID, 1, GL_FALSE, glm::value_ptr(matView));
 
 
 
@@ -911,21 +1104,16 @@ int main(void)
 
             
 
-
-            //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
-            glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(mvp));
-
             //glDrawArrays(GL_TRIANGLES, 0, 6);
             //glDrawArrays(GL_TRIANGLES, 0, ::g_numOfVertices);
 
 
 
-            ////Set the uniform colour info
-            //glUniform4f(objectColour_LocID,
-            //            pCurMesh->colourRGBA.r,
-            //            pCurMesh->colourRGBA.g,
-            //            pCurMesh->colourRGBA.b,
-            //            pCurMesh->colourRGBA.a);
+            //Set the uniform colour info
+            glUniform3f(diffuseColour_LocID,
+                        pCurMesh->colourRGBA.r,
+                        pCurMesh->colourRGBA.g,
+                        pCurMesh->colourRGBA.b);
 
 
             sModelDrawInfo mdiModelToDraw;
@@ -948,10 +1136,6 @@ int main(void)
     }
 
     delete ::g_pShaderManager;
-
-    //delete bunny;
-    //delete plane;
-    //delete[] ::g_pVertexBuffer;
 
     //delete pointer to objects
     for (std::vector<cMeshObject*>::iterator it_object = ::g_pVecObjects.begin();
